@@ -32,8 +32,33 @@ def ch_tool(degree, tool):  # 選擇要用的刀具
 
     return a
 
+
 ################# choose tool end ##########
 
+################# graph _ tool expend ##############
+
+def tool_expension(tool, tool_expend):
+    # tool = np.zeros([4, 3])
+    # tool[0, :] = [10, 2, 0]
+    # tool[2, :] = [10, 2, 90]
+    # tool[1, :] = [10, 2, 30]
+    for i in range(len(tool)):
+        tool_s_0deg = np.zeros([2, 4])
+        # rotate part
+        theta = tool[i][2] * np.pi / 180
+        trans_array = np.array(
+            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        # rotate part end
+        tool_s_0deg[0] = [- tool[i][0], tool[i][0], tool[i][0], -tool[i][0]]
+        tool_s_0deg[1] = [- tool[i][1], -tool[i][1], tool[i][1], tool[i][1]]
+        # tool_b[0] = [-10, 10, 10, -10]
+        # tool_b[1] = [-2, -2, 2, 2]
+        tool_expend[i] = np.matmul(trans_array, tool_s_0deg)
+
+    print(tool_expend)
+    return tool_expend
+
+################# graph _ tool expend ##############
 ##################### hole #################
 
 
@@ -251,7 +276,7 @@ def outside_edge(L, H, sp1, row_rect, column_rect):  # 做矩形外圍的加工
     #                        start_offset[k2, 1], tool_num])
 
     #     k2 = k2 + 1
-    ###################-----------改寫#################
+    ################### -----------改寫#################
    # x-dir part
     partgap = 200
     for y in range(int(column_rect)*2):
@@ -456,8 +481,10 @@ print("Rect + Shear part\n")
 
 tool = np.zeros([4, 3])
 tool[0, :] = [10, 2, 0]
-tool[2, :] = [2, 10, 90]
+tool[2, :] = [10, 2, 90]
 tool[1, :] = [10, 2, 30]
+tool_expend = np.zeros(([len(tool), 2, 4]))
+tool_expend = tool_expension(tool, tool_expend)
 
 in_variable_rs = np.zeros([1, 14])                       # input variable
 in_variable_rs[0, :] = [50, 30, 50, -50, 25, 25, 1, 1, 75, -130, 10, 10, 2, 2]
