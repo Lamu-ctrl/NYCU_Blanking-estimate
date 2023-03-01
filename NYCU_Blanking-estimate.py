@@ -512,6 +512,7 @@ def nibbling_outside_edge(sp1, row_rect, column_rect, nibblingRadius):  # 做nib
     vpm_out = 0  # outside part vertical part move
 
     tool_num = ch_tool(-1, tool)  # 取刀具的資料
+    print("幾號刀", tool_num)
     R_tool = tool[tool_num, 0]
     L_tool = tool[tool_num, 0]
     w_tool = tool[tool_num, 1]
@@ -546,11 +547,11 @@ def nibbling_outside_edge(sp1, row_rect, column_rect, nibblingRadius):  # 做nib
             degree_start = 180  # 左側端點
             dergee_target = 360
             direction = 1  # +1為逆時鐘， -1為順時鐘
-            pinch = (float(nibblingRadius)*2)/6  # 1/6 直徑
+            pinch = (float(R_tool)*2)/6  # 1/6 直徑
             circumference = 2*math.pi*nibblingRadius
             hits = circumference*(dergee_target/360)/pinch
             print(hits)
-            for theata in range(degree_start, degree_start+dergee_target*direction, int(dergee_target*direction/math.ceil(hits))):  # nibbling
+            for theata in range(degree_start, degree_start+dergee_target*direction, math.ceil(dergee_target*direction/math.ceil(hits))):  # nibbling
 
                 # a_pre = a  # 記錄前一次加工程剩餘的長度
                 # a = a - (L_tool - 1)  # 這次加工後剩餘的長度
@@ -691,6 +692,80 @@ def graph(xy_data, tool):
 
 ################## graph end ###################
 
+################### graph_circle ######################
+
+
+def graph_circle(xy_data, tool):
+
+    num = len(xy_data)  # 刀具總共停留在多少個地方
+
+    # for i in range(len(tool)):
+    #     tool_s_0deg = np.zeros([2, 4])
+    #     # rotate part
+    #     theta = tool[i][2] * np.pi / 180
+    #     trans_array = np.array(
+    #         [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    #     # rotate part end
+    #     tool_s_0deg[0] = [- tool[i][0], tool[i][0], tool[i][0], -tool[i][0]]
+    #     tool_s_0deg[1] = [- tool[i][1], -tool[i][1], tool[i][1], tool[i][1]]
+    #     # tool_b[0] = [-10, 10, 10, -10]
+    #     # tool_b[1] = [-2, -2, 2, 2]
+    #     tool_expend[i] = np.matmul(trans_array, tool_s_0deg)
+
+    graph_data = []
+    graph_data.append([2, 0, 0, 0, num, 0, 0])
+    # version1, version2, # circle, # triangle, # rectangle, # polygon, # loop,
+    graph_data.append([0, 0, 0])
+    #gID, gType, loopID
+    graph_data.append([0, 0, 1200, 800, 4, 0.95, 2, 0.2, 0.062])
+    # table off(x,y), sheet-size(x, y), start(edge,par), end(edge,par), thickness
+
+    for k1 in range(num):
+
+        graph_data.append([";gID", "gType", "iUserSetID", "parentID",
+                          "rotmiliDeg", "iAppRef", "iCamAttr", "iRevEngF"])
+        graph_data.append([k1, 32, k1, 0, 0, 0, 1, 1])
+        # ; radius, start_at_degrees, centerX, centerY,
+        # 50.0, 0., 100.0, 100.0,
+        # print(xy_data)
+        tool_num = xy_data[k1][2]
+        R_tool = tool[tool_num, 0]
+        graph_data.append([R_tool, 0., xy_data[k1][0], xy_data[k1][1]])
+
+        # single_p = xy_data[k1]
+
+        # theta = tool[single_p[2], 2]
+        # theta = theta * np.pi / 180
+
+        # trans_array = np.array(
+        #     [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        # # 旋轉矩陣
+
+        # theta = 30 * np.pi / 180  # 將角度轉為徑度制
+        # tool_graph = np.zeros([2, 4])  # 刀四周的點位
+        # x_offset = tool[single_p[2], 0]/2
+        # y_offset = tool[single_p[2], 1]/2
+
+        # tool_graph[0] = [-x_offset, x_offset, x_offset, -x_offset]
+        # tool_graph[1] = [-y_offset, -y_offset, y_offset, y_offset]
+
+        # tool_trans = np.matmul(trans_array, tool_graph)  # 乘上旋轉矩陣
+
+        # single_p_gra = []
+
+        # for k2 in range(4):
+
+        #     x_point = single_p[0] + tool_trans[0][k2] + 0
+        #     y_point = single_p[1] + tool_trans[1][k2] + 800
+        #     single_p_gra.append(x_point)
+        #     single_p_gra.append(y_point)
+
+        # graph_data.append(single_p_gra)
+
+    return graph_data
+
+################## graph_circle end ###################
+
 ########################## main #########################
 
 
@@ -702,7 +777,7 @@ if __name__ == "__main__":
                  "vertical tool shear in-btwn move", "turret tool change deg"
                  ])
     option = input(
-        "[1] Rect single hit part \n[2] Crawl the whole traders now \n[3] Crawl the whole traders regularly \nSelect mode: ")
+        "[1] Rect single hit part \n[2] Circle \n[3] Crawl the whole traders regularly \nSelect mode: ")
 
     if option == "1":
         ########## Rect ##########
@@ -838,13 +913,13 @@ if __name__ == "__main__":
             data, xy_data = nibbling(
                 L, H, sp1, L_hole, H_hole, degree, column_hole, row_hole, x_gap, y_gap, sp2, row_rect, column_rect, nibblingRadius)
 
-            # graphic_data = graph(xy_data, tool)
+            graphic_data = graph_circle(xy_data, tool)
 
             k_str = str(k+1)
-            path = 'rect_sample' + k_str + '_xy.txt'
+            path = 'circle_sample' + k_str + '_xy.txt'
             with open(path, 'w', newline='') as txtfile:
                 writer = csv.writer(txtfile)
-                writer.writerows(xy_data)
+                writer.writerows(graphic_data)
 
         ######## Rect end ########
     elif option == "3":
