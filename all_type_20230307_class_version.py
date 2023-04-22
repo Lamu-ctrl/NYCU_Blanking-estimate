@@ -113,7 +113,7 @@ def extrat_geometric(wholedata):
                 else:
                     for part in Part:
                         if part.gID == onerow_data[3]:
-                            part.hole(geo.RECTANGLE2D_IN_GRID(
+                            part.add_hole(geo.RECTANGLE2D_IN_GRID(
                                 wholedata[k], wholedata[k+1], wholedata[k+2]))
 
                 geometric.append(geo.RECTANGLE2D_IN_GRID(
@@ -126,7 +126,7 @@ def extrat_geometric(wholedata):
                 else:
                     for part in Part:
                         if part.gID == onerow_data[3]:
-                            part.hole(geo.RECTANGLE2D(
+                            part.add_hole(geo.RECTANGLE2D(
                                 wholedata[k], wholedata[k+1]))
                 geometric.append(geo.RECTANGLE2D(wholedata[k], wholedata[k+1]))
                 k = k+2
@@ -137,7 +137,8 @@ def extrat_geometric(wholedata):
             else:
                 for part in Part:
                     if part.gID == onerow_data[3]:
-                        part.hole(geo.CIRCLE2D(wholedata[k], wholedata[k+1]))
+                        tmp = geo.CIRCLE2D(wholedata[k], wholedata[k+1])
+                        part.add_hole(tmp)
             geometric.append(geo.CIRCLE2D(wholedata[k], wholedata[k+1]))
             k = k+2
         elif onerow_data[1] == 34:  # polygon2d
@@ -151,7 +152,7 @@ def extrat_geometric(wholedata):
             else:
                 for part in Part:
                     if part.gID == onerow_data[3]:
-                        part.hole(geo.POLYGON2D(wholedata[k], rows))
+                        part.add_hole(geo.POLYGON2D(wholedata[k], rows))
             geometric.append(geo.POLYGON2D(wholedata[k], rows))
             print("lines", lines,
                   " onerow_data[4]*2 / 8 :  ", onerow_data[4]*2 / 8)
@@ -164,7 +165,7 @@ def extrat_geometric(wholedata):
             else:
                 for part in Part:
                     if part.gID == onerow_data[3]:
-                        part.hole(geo.TRIANGLE2D(
+                        part.add_hole(geo.TRIANGLE2D(
                             wholedata[k], wholedata[k+1]))
             geometric.append(geo.TRIANGLE2D(wholedata[k], wholedata[k+1]))
             k = k+2
@@ -176,14 +177,15 @@ def extrat_geometric(wholedata):
                 # print("k ", k, " . k+i", k+i)
                 # print(wholedata[k+1+i])
                 rows.append(wholedata[k+1+i])
+            print(rows)
             if onerow_data[3] == 0:
                 Part.append(geo.part(geo.COMPOSITE2DLOOP(wholedata[k], rows)))
             else:
                 for part in Part:
                     if part.gID == onerow_data[3]:
-                        part.hole(geo.COMPOSITE2DLOOP(wholedata[k], rows))
+                        part.add_hole(geo.COMPOSITE2DLOOP(wholedata[k], rows))
 
-            geometric.append(geo.COMPOSITE2DLOOP(wholedata[k], rows))
+            # geometric.append(geo.COMPOSITE2DLOOP(wholedata[k], rows))
             # print("lines", lines,
             #       " onerow_data[4]*2 / 8 :  ", onerow_data[4]*2 / 8)
             k = k+1+numEdge*2
@@ -755,10 +757,26 @@ wholedata, row_data = readfile("test4.txt")
 
 geometric, Part = extrat_geometric(wholedata)
 
-print(geometric)
-print(len(geometric))
+# print(geometric)
+# print(len(geometric))
 print(Part)
 print(len(Part))
+for part in Part:
+    print("gid : ", part.gID)
+    print("contour : ", part.contour)
+    print("hole : ", part.hole)
+
+    print(part.toFuntion())
+    print("part data ", part.data)
+
+# print("part.Data", len(geo.part.Data))
+# print("cir.data", len(geo.CIRCLE2D.Data))
+# print("RECTANGLE2D.data", len(geo.RECTANGLE2D.Data))
+
+
+def feature(all_xy_data):
+    return
+
 # line_var, rect_var, circle_var = data_to_function(wholedata)
 
 # xy_data = []
