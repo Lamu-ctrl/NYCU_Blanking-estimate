@@ -119,8 +119,8 @@ def generate_shapes(num_rectangles, sheet_width, sheet_height, max_rectangle_wid
 
 
 def generate_random_rectangle(max_width, max_height, sheet_width, sheet_height):
-    width = random.randint(75, max_width)
-    height = random.randint(75, max_height)
+    width = random.randint(200, max_width)
+    height = random.randint(200, max_height)
     x = random.randint(0, sheet_width - width)
     y = random.randint(0, sheet_height - height)
     return Polygon([(x, y), (x + width, y), (x + width, y + height), (x, y + height)])
@@ -140,9 +140,10 @@ def generate_random_roundconer(sides):
 # Example usage
 sheet_width = 4000
 sheet_height = 2000
-num_rectangles = 5
-max_rectangle_width = 500
-max_rectangle_height = 500
+# 矩形數量
+num_rectangles = random.randint(5, 15)
+max_rectangle_width = 1000
+max_rectangle_height = 1000
 gIDnow = 1
 shapes = generate_shapes(num_rectangles, sheet_width,
                          sheet_height, max_rectangle_width, max_rectangle_height)
