@@ -92,7 +92,7 @@ class roundConer:
 
 
 class with_sheer_hole:
-    def __init__(self, raidus=10, out=[]):
+    def __init__(self, out=[]):
         self.sides = out
         self.x1 = self.sides[0][0]
         self.y1 = self.sides[0][1]
@@ -103,8 +103,8 @@ class with_sheer_hole:
         self.x4 = self.sides[3][0]
         self.y4 = self.sides[3][1]
         num_shear = random.randint(2, 10)
-        shapes, self.raw_xydata = generate_shear_in_rectangle(num_shear, self.x1, self.x2, self.y1, self.y3, int(
-            abs(self.x2-self.x1)/2), int(abs(self.y3-self.y1)/2))
+        shapes, self.raw_xydata = generate_shear_in_rectangle(
+            num_shear, self.x1, self.x2, self.y1, self.y3)
         # plt
         plot_shapes(shapes, 4000, 4000)
 
@@ -131,7 +131,7 @@ class with_sheer_hole:
             print(
                 f"; gID, gType, iUserSetID, parentID, rotmiliDeg, iAppRef, iCamAttr, iRevEngF, ", file=f)
             print(
-                f"{gID*10000+counter}, 30, 4, 0, {row[4]}, 0, 16, 1, ", file=f)
+                f"{gID*10000+counter}, 30, 4, 0, {row[4]*1000}, 0, 16, 1, ", file=f)
             print(f";x1, y1, x2, y2, x3, y3, x4, y4,", file=f)
             print(
                 f"{row[0][0]}, {row[0][1]}, {row[1][0]}, {row[1][1]}, {row[2][0]},  {row[2][1]}, {row[3][0]},  {row[3][1]}, ", file=f)
@@ -155,7 +155,7 @@ def plot_shapes(shapes, sheet_width, sheet_height):
         else:
             print("Unsupported shape type")
 
-    # plt.show()
+    plt.show()
 
 
 def generate_shapes(num_rectangles, sheet_width, sheet_height, max_rectangle_width, max_rectangle_height):
@@ -179,23 +179,29 @@ def generate_random_rectangle(max_width, max_height, sheet_width, sheet_height):
     return Polygon([(x, y), (x + width, y), (x + width, y + height), (x, y + height)])
 
 
-def generate_shear_in_rectangle(num_rectangles, xl, xr, yl, yr, max_rectangle_width, max_rectangle_height):
+def generate_shear_in_rectangle(num_rectangles, xl, xr, yl, yr):
     shapes = []
     raw_xydata = []
+    max_try = 10000
+    counter = 0
     while len(shapes) < num_rectangles:
+        counter += 1
         new_shape, xydata = generate_random_rotated_rectangle(
-            max_rectangle_width, max_rectangle_height, xl, xr, yl, yr, degree=random.randint(15, 75))
+            xl, xr, yl, yr, degree=random.randint(15, 75))
 
         if not any(new_shape.intersects(shape) for shape in shapes):
-            shapes.append(new_shape)
-            raw_xydata.append(xydata)
+            if new_shape.within(Polygon([(xl, yl), (xl, xl), (xr, yr), (xl, yr)])):
+                shapes.append(new_shape)
+                raw_xydata.append(xydata)
+        if counter >= max_try:
+            break
 
     return shapes, raw_xydata
 
 
-def generate_random_rotated_rectangle(max_width, max_height, xl, xr, yl, yr, degree=30):
-    width = random.randint(int(max_width/20), max_width)
-    height = random.randint(int(max_height/20), max_height)
+def generate_random_rotated_rectangle(xl, xr, yl, yr, degree=30):
+    width = random.randint(20, int(abs(xr-xl)/2))
+    height = random.randint(20, int(abs(yr-yl)/2))
     x = random.randint(xl, xr - width)
     y = random.randint(yl, yr - height)
 
@@ -252,7 +258,7 @@ def generate_random_shear_inside_rect(sides):
 sheet_width = 4000
 sheet_height = 2000
 # 矩形數量
-num_rectangles = random.randint(5, 15)
+num_rectangles = random.randint(2, 5)
 max_rectangle_width = 1000
 max_rectangle_height = 1000
 gIDnow = 1
@@ -303,10 +309,6 @@ training_cir_rectshear_sheet.append([0, 0, 4000, 2000, 4, 0.95, 2, 0.2, 0.062])
 training_cir_rectshear_sheet.append(["; "])
 
 path = f'./output.txt'
-f = open(path, 'a', encoding='UTF-8')
-for row in training_cir_rectshear_sheet:
-    for ele in row:
-        print(f"{ele}", file=f)
 
 with open(path, 'w', newline='') as txtfile:
     writer = csv.writer(txtfile)
