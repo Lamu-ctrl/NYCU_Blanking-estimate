@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, Point, LineString
 import numpy as np
 import math
+import csv
 
 
 class roundConer:
@@ -117,7 +118,7 @@ class with_sheer_hole:
     def write_to_txt(self, gID):
         counter = 0
         path = f'./output.txt'
-        f = open(path, 'a', encoding='UTF-8')
+        f = open(path, 'a+', encoding='UTF-8')
 
         print(f"; rect part", file=f)
         print(f"; gID, gType, iUserSetID, parentID, rotmiliDeg, iAppRef, iCamAttr, iRevEngF,", file=f)
@@ -135,6 +136,8 @@ class with_sheer_hole:
             print(
                 f"{row[0][0]}, {row[0][1]}, {row[1][0]}, {row[1][1]}, {row[2][0]},  {row[2][1]}, {row[3][0]},  {row[3][1]}, ", file=f)
             counter += 1
+
+        f.close()
 
 
 def plot_shapes(shapes, sheet_width, sheet_height):
@@ -260,6 +263,55 @@ plot_shapes(shapes, sheet_width, sheet_height)
 
 
 # print(shapes)
+
+# INI
+training_cir_rectshear_sheet = []
+training_cir_rectshear_sheet.append(["; SYSCONFIG"])
+training_cir_rectshear_sheet.append(["; version", "unit flag", "draw speed"])
+training_cir_rectshear_sheet.append(["; 2.1", "0(mks) 1(fbs)", "(%)"])
+training_cir_rectshear_sheet.append([201, 0, 5, 0, 0, 0, 0, 0, 0, 0,])
+training_cir_rectshear_sheet.append([";"])
+training_cir_rectshear_sheet.append(["; SYS INT DATA"])
+training_cir_rectshear_sheet.append(
+    ["; nibble", "nibble", "rect", "shear", "hit1", "hit2", "hit3", "not used"])
+training_cir_rectshear_sheet.append(
+    ["; arc", "line", "4side", "line", "one", "2nd", "3rd"])
+training_cir_rectshear_sheet.append([10, 10, 20, 40, 20, 15, 15, 0, 0, 0])
+training_cir_rectshear_sheet.append(
+    ["; screw", "tap", "louver", "form", "turret", "not used",])
+training_cir_rectshear_sheet.append(["; 1", "1", "1", "4", "rot 90",])
+training_cir_rectshear_sheet.append([600, 100, 200, 100, 500, 0, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append([5, 10, 5, 10, 10, 20, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append([";"])
+training_cir_rectshear_sheet.append(["; SYS DBL DATA"])
+training_cir_rectshear_sheet.append(
+    ["; operation time in sec", "distance in meter - unless specified otherwise"])
+training_cir_rectshear_sheet.append(
+    ["; Vx m/s", "Vy m/s", "Ax m/s2", "Ay m/s2, not used"])
+training_cir_rectshear_sheet.append([8, 10, 20, 30, 0., 0., 0., 0., 0., 0.])
+training_cir_rectshear_sheet.append(["; not used"])
+training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+training_cir_rectshear_sheet.append(["; gID", "gType", "loopID"])
+training_cir_rectshear_sheet.append([0, 0, 0])
+training_cir_rectshear_sheet.append(
+    ["; table off(x", "y)", "sheet size(x", "y)", "start(edge", "par)", "end(edge", "par)", "thickness"])
+training_cir_rectshear_sheet.append([0, 0, 4000, 2000, 4, 0.95, 2, 0.2, 0.062])
+training_cir_rectshear_sheet.append(["; "])
+
+path = f'./output.txt'
+f = open(path, 'a', encoding='UTF-8')
+for row in training_cir_rectshear_sheet:
+    for ele in row:
+        print(f"{ele}", file=f)
+
+with open(path, 'w', newline='') as txtfile:
+    writer = csv.writer(txtfile)
+    writer.writerows(training_cir_rectshear_sheet)
+
 all_rounds = []
 for s in shapes:
 
