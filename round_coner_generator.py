@@ -2,6 +2,7 @@ import random
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, Point, LineString
 import csv
+import os
 
 
 class roundConer:
@@ -105,6 +106,7 @@ def plot_shapes(shapes, sheet_width, sheet_height):
             print("Unsupported shape type")
 
     plt.show()
+    # plt.savefig("./round_coner_generator/" + i + ".png")
 
 
 def generate_shapes(num_rectangles, sheet_width, sheet_height, max_rectangle_width, max_rectangle_height):
@@ -138,74 +140,89 @@ def generate_random_roundconer(sides):
     return geo
 
 
-# Example usage
-sheet_width = 4000
-sheet_height = 2000
-# 矩形數量
-num_rectangles = random.randint(5, 15)
-max_rectangle_width = 1000
-max_rectangle_height = 1000
-gIDnow = 1
-shapes = generate_shapes(num_rectangles, sheet_width,
-                         sheet_height, max_rectangle_width, max_rectangle_height)
+def run_many_times(times):
+    if not (os.path.exists(f'./round_coner_generator/')):
+        os.mkdir(f'./round_coner_generator/')
 
-plot_shapes(shapes, sheet_width, sheet_height)
+    for i in range(times):
 
-# INI
-training_cir_rectshear_sheet = []
-training_cir_rectshear_sheet.append(["; SYSCONFIG"])
-training_cir_rectshear_sheet.append(["; version", "unit flag", "draw speed"])
-training_cir_rectshear_sheet.append(["; 2.1", "0(mks) 1(fbs)", "(%)"])
-training_cir_rectshear_sheet.append([201, 0, 5, 0, 0, 0, 0, 0, 0, 0,])
-training_cir_rectshear_sheet.append([";"])
-training_cir_rectshear_sheet.append(["; SYS INT DATA"])
-training_cir_rectshear_sheet.append(
-    ["; nibble", "nibble", "rect", "shear", "hit1", "hit2", "hit3", "not used"])
-training_cir_rectshear_sheet.append(
-    ["; arc", "line", "4side", "line", "one", "2nd", "3rd"])
-training_cir_rectshear_sheet.append([10, 10, 20, 40, 20, 15, 15, 0, 0, 0])
-training_cir_rectshear_sheet.append(
-    ["; screw", "tap", "louver", "form", "turret", "not used",])
-training_cir_rectshear_sheet.append(["; 1", "1", "1", "4", "rot 90",])
-training_cir_rectshear_sheet.append([600, 100, 200, 100, 500, 0, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append([5, 10, 5, 10, 10, 20, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append([";"])
-training_cir_rectshear_sheet.append(["; SYS DBL DATA"])
-training_cir_rectshear_sheet.append(
-    ["; operation time in sec", "distance in meter - unless specified otherwise"])
-training_cir_rectshear_sheet.append(
-    ["; Vx m/s", "Vy m/s", "Ax m/s2", "Ay m/s2, not used"])
-training_cir_rectshear_sheet.append([8, 10, 20, 30, 0., 0., 0., 0., 0., 0.])
-training_cir_rectshear_sheet.append(["; not used"])
-training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-training_cir_rectshear_sheet.append(["; gID", "gType", "loopID"])
-training_cir_rectshear_sheet.append([0, 0, 0])
-training_cir_rectshear_sheet.append(
-    ["; table off(x", "y)", "sheet size(x", "y)", "start(edge", "par)", "end(edge", "par)", "thickness"])
-training_cir_rectshear_sheet.append([0, 0, 4000, 2000, 4, 0.95, 2, 0.2, 0.062])
-training_cir_rectshear_sheet.append(["; "])
+        # Example usage
+        sheet_width = 4000
+        sheet_height = 2000
+        # 矩形數量
+        num_rectangles = random.randint(5, 15)
+        max_rectangle_width = 1000
+        max_rectangle_height = 1000
+        gIDnow = 1
+        shapes = generate_shapes(num_rectangles, sheet_width,
+                                 sheet_height, max_rectangle_width, max_rectangle_height)
 
-path = f'./output.txt'
+        plot_shapes(shapes, sheet_width, sheet_height)
 
-with open(path, 'w', newline='') as txtfile:
-    writer = csv.writer(txtfile)
-    writer.writerows(training_cir_rectshear_sheet)
+        # INI
+        training_cir_rectshear_sheet = []
+        training_cir_rectshear_sheet.append(["; SYSCONFIG"])
+        training_cir_rectshear_sheet.append(
+            ["; version", "unit flag", "draw speed"])
+        training_cir_rectshear_sheet.append(["; 2.1", "0(mks) 1(fbs)", "(%)"])
+        training_cir_rectshear_sheet.append([201, 0, 5, 0, 0, 0, 0, 0, 0, 0,])
+        training_cir_rectshear_sheet.append([";"])
+        training_cir_rectshear_sheet.append(["; SYS INT DATA"])
+        training_cir_rectshear_sheet.append(
+            ["; nibble", "nibble", "rect", "shear", "hit1", "hit2", "hit3", "not used"])
+        training_cir_rectshear_sheet.append(
+            ["; arc", "line", "4side", "line", "one", "2nd", "3rd"])
+        training_cir_rectshear_sheet.append(
+            [10, 10, 20, 40, 20, 15, 15, 0, 0, 0])
+        training_cir_rectshear_sheet.append(
+            ["; screw", "tap", "louver", "form", "turret", "not used",])
+        training_cir_rectshear_sheet.append(["; 1", "1", "1", "4", "rot 90",])
+        training_cir_rectshear_sheet.append(
+            [600, 100, 200, 100, 500, 0, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append([5, 10, 5, 10, 10, 20, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append([";"])
+        training_cir_rectshear_sheet.append(["; SYS DBL DATA"])
+        training_cir_rectshear_sheet.append(
+            ["; operation time in sec", "distance in meter - unless specified otherwise"])
+        training_cir_rectshear_sheet.append(
+            ["; Vx m/s", "Vy m/s", "Ax m/s2", "Ay m/s2, not used"])
+        training_cir_rectshear_sheet.append(
+            [8, 10, 20, 30, 0., 0., 0., 0., 0., 0.])
+        training_cir_rectshear_sheet.append(["; not used"])
+        training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        training_cir_rectshear_sheet.append(["; gID", "gType", "loopID"])
+        training_cir_rectshear_sheet.append([0, 0, 0])
+        training_cir_rectshear_sheet.append(
+            ["; table off(x", "y)", "sheet size(x", "y)", "start(edge", "par)", "end(edge", "par)", "thickness"])
+        training_cir_rectshear_sheet.append(
+            [0, 0, 4000, 2000, 4, 0.95, 2, 0.2, 0.062])
+        training_cir_rectshear_sheet.append(["; "])
 
-# print(shapes)
-all_rounds = []
-for s in shapes:
-    # print(s)
-    # print(type(s))
-    p = list(s.exterior.coords)
-    # print(type(p))
-    # print(p[:4])
-    # print(p[0][1])
-    all_rounds.append(generate_random_roundconer(p))
+        path = "./round_coner_generator/output" + str(i) + ".txt"
 
-for it in all_rounds:
-    it.write_to_txt(gIDnow)
-    gIDnow += 1
+        with open(path, 'w', newline='') as txtfile:
+            writer = csv.writer(txtfile)
+            writer.writerows(training_cir_rectshear_sheet)
+
+        # print(shapes)
+        all_rounds = []
+        for s in shapes:
+            # print(s)
+            # print(type(s))
+            p = list(s.exterior.coords)
+            # print(type(p))
+            # print(p[:4])
+            # print(p[0][1])
+            all_rounds.append(generate_random_roundconer(p))
+
+        for it in all_rounds:
+            it.write_to_txt(gIDnow)
+            gIDnow += 1
+
+
+if __name__ == "__main__":
+    run_many_times(36)
