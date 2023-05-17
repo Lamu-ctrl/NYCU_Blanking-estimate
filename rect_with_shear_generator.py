@@ -1,7 +1,13 @@
 import random
 import matplotlib.pyplot as plt
+from shapely import affinity
 from shapely.geometry import Polygon, Point, LineString
+import numpy as np
+import math
 import csv
+import time
+import tqdm
+from tqdm import trange
 import os
 
 
@@ -27,8 +33,9 @@ class roundConer:
 
         return [self.w, self.video_counter, self.video, self.note_counter, self.note]
 
-    def write_to_txt(self, gID, path):
+    def write_to_txt(self, gID):
         counter = 0
+        path = f'./output.txt'
         f = open(path, 'a', encoding='UTF-8')
 
         print(f"; COMPOSITE2DLOOP ", file=f)
@@ -89,6 +96,54 @@ class roundConer:
         counter += 1
 
 
+class with_sheer_hole:
+    def __init__(self, out=[]):
+        self.sides = out
+        self.x1 = self.sides[0][0]
+        self.y1 = self.sides[0][1]
+        self.x2 = self.sides[1][0]
+        self.y2 = self.sides[1][1]
+        self.x3 = self.sides[2][0]
+        self.y3 = self.sides[2][1]
+        self.x4 = self.sides[3][0]
+        self.y4 = self.sides[3][1]
+        num_shear = random.randint(2, 10)
+        shapes, self.raw_xydata = generate_shear_in_rectangle(
+            num_shear, self.x1, self.x2, self.y1, self.y3)
+        # plt
+        # plot_shapes(shapes, 4000, 4000)
+
+    def __str__(self):
+        return f"{self.w}: {self.l}"
+
+    def output(self):
+
+        return [self.w, self.video_counter, self.video, self.note_counter, self.note]
+
+    def write_to_txt(self, gID, path):
+        counter = 0
+        f = open(path, 'a+', encoding='UTF-8')
+
+        print(f"; rect part", file=f)
+        print(f"; gID, gType, iUserSetID, parentID, rotmiliDeg, iAppRef, iCamAttr, iRevEngF,", file=f)
+        print(
+            f"{gID},     30,       19,        0,        0, 	   0,  	0, 	    1,", file=f)
+        print(f"{self.x1}, {self.y1}, {self.x2},{self.y2},{self.x3},{self.y3},{self.x4},{self.y4}, ", file=f)
+
+        for row in self.raw_xydata:
+            print(f"; rect hole  {row[4]} deg", file=f)
+            print(
+                f"; gID, gType, iUserSetID, parentID, rotmiliDeg, iAppRef, iCamAttr, iRevEngF, ", file=f)
+            print(
+                f"{gID*10000+counter}, 30, 4, 0, {row[4]*1000}, 0, 16, 1, ", file=f)
+            print(f";x1, y1, x2, y2, x3, y3, x4, y4,", file=f)
+            print(
+                f"{row[0][0]}, {row[0][1]}, {row[1][0]}, {row[1][1]}, {row[2][0]},  {row[2][1]}, {row[3][0]},  {row[3][1]}, ", file=f)
+            counter += 1
+
+        f.close()
+
+
 def plot_shapes(shapes, sheet_width, sheet_height):
     fig, ax = plt.subplots(figsize=(20, 10))
     ax.set_xlim(0, sheet_width)
@@ -105,11 +160,11 @@ def plot_shapes(shapes, sheet_width, sheet_height):
             print("Unsupported shape type")
 
     # plt.show()
-    # plt.savefig("./round_coner_generator/" + i + ".png")
 
 
 def generate_shapes(num_rectangles, sheet_width, sheet_height, max_rectangle_width, max_rectangle_height):
     shapes = []
+
     while len(shapes) < num_rectangles:
         new_shape = generate_random_rectangle(
             max_rectangle_width, max_rectangle_height, sheet_width, sheet_height)
@@ -127,11 +182,99 @@ def generate_random_rectangle(max_width, max_height, sheet_width, sheet_height):
     y = random.randint(0, sheet_height - height)
     return Polygon([(x, y), (x + width, y), (x + width, y + height), (x, y + height)])
 
+# shear
+
+
+def generate_shear_in_rectangle(num_rectangles, xl, xr, yl, yr):
+    shapes = []
+    raw_xydata = []
+    max_try = 200000
+    counter = 0
+    counter2 = 0
+    while len(shapes) < num_rectangles:
+        counter += 1
+        new_shape, xydata = generate_random_rotated_rectangle(
+            xl, xr, yl, yr, degree=random.randint(15, 75))
+
+        if not any(new_shape.intersects(shape) for shape in shapes):
+            if new_shape.within(Polygon([(xl, yl), (xl, xl), (xr, yr), (xl, yr)])):
+                shapes.append(new_shape)
+                raw_xydata.append(xydata)
+        if counter >= max_try:
+            break
+            if counter2 >= 5:
+                break
+
+            counter2 += 1
+            print("clear")
+            shapes.clear()
+            raw_xydata.clear()
+            counter = 0
+
+    return shapes, raw_xydata
+
+
+def generate_random_rotated_rectangle(xl, xr, yl, yr, degree=30):
+    width = random.randint(20, int(abs(xr-xl)/3))
+    height = random.randint(20, int(abs(yr-yl)/3))
+    x = random.randint(xl, xr - width)
+    y = random.randint(yl, yr - height)
+
+    #旋轉: [(x, y), (x + width, y), (x + width, y + height), (x, y + height)]
+
+    # Define the rectangle as a list of points
+    rectangle_points = [[x, y], [x + width, y],
+                        [x + width, y + height], [x, y + height]]
+    rotated_rectangle_points = rotate(rectangle_points, 0, degree)
+    rotated_rectangle = Polygon(rotated_rectangle_points)
+    # rectangle.rotate(angle, center=center)
+
+    # 判定角度
+    # angle = angle_between_points(
+    #     rotated_rectangle_points[0], rotated_rectangle_points[1], rotated_rectangle_points[2])
+    # print(f"The angle between points A, B, and C is {angle} degrees.")
+
+    # 加上角度
+    rectangle_points.append(degree)
+
+    # print("aft", rectangle)
+    # time.sleep(5)
+    return rotated_rectangle, rectangle_points
+
+
+def rotate(points, origin_index, angle):
+    """
+    Rotate a rectangle counterclockwise by a given angle around a given origin point.
+
+    The angle should be given in degrees.
+    """
+    ox, oy = points[origin_index]
+    angle = np.radians(angle)  # 將角度轉換為弧度
+
+    rotated_points = []
+    for px, py in points:
+        qx = ox + np.cos(angle) * (px - ox) - np.sin(angle) * (py - oy)
+        qy = oy + np.sin(angle) * (px - ox) + np.cos(angle) * (py - oy)
+        rotated_points.append([qx, qy])
+
+    return rotated_points
+
+
+def angle_between_points(a, b, c):
+    """Calculate the angle between three points."""
+    ba = np.array(a) - np.array(b)
+    bc = np.array(c) - np.array(b)
+
+    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+    angle = np.arccos(cosine_angle)
+
+    return np.degrees(angle)
+
 
 def generate_random_roundconer(sides):
 
     r = random.randint(
-        5, int(min(abs(sides[0][0]-sides[1][0]), abs(sides[1][1]-sides[2][1]))/3))
+        5, int(min(abs(sides[0][0]-sides[1][0]), abs(sides[1][1]-sides[2][1]))/2))
 
     w = abs(sides[0][0]-sides[1][0])-2*r
     l = abs(sides[1][1]-sides[2][1])-2*r
@@ -139,17 +282,23 @@ def generate_random_roundconer(sides):
     return geo
 
 
-def run_many_times(times):
-    if not (os.path.exists(f'./round_coner_generator/')):
-        os.mkdir(f'./round_coner_generator/')
+def generate_random_shear_inside_rect(sides):
 
-    for i in range(times):
+    geo = with_sheer_hole(out=sides)
+    return geo
+
+
+def run_many_times(times):
+    if not (os.path.exists(f'./rectWithShear_generator/')):
+        os.mkdir(f'./rectWithShear_generator/')
+
+    for i in trange(times):
 
         # Example usage
         sheet_width = 4000
         sheet_height = 2000
         # 矩形數量
-        num_rectangles = random.randint(5, 15)
+        num_rectangles = random.randint(2, 5)
         max_rectangle_width = 1000
         max_rectangle_height = 1000
         gIDnow = 1
@@ -157,6 +306,8 @@ def run_many_times(times):
                                  sheet_height, max_rectangle_width, max_rectangle_height)
 
         plot_shapes(shapes, sheet_width, sheet_height)
+
+        # print(shapes)
 
         # INI
         training_cir_rectshear_sheet = []
@@ -201,22 +352,19 @@ def run_many_times(times):
             [0, 0, 4000, 2000, 4, 0.95, 2, 0.2, 0.062])
         training_cir_rectshear_sheet.append(["; "])
 
-        path = "./round_coner_generator/output" + str(i) + ".txt"
+        path = "./rectWithShear_generator/output" + str(i) + ".txt"
 
         with open(path, 'w', newline='') as txtfile:
             writer = csv.writer(txtfile)
             writer.writerows(training_cir_rectshear_sheet)
 
-        # print(shapes)
         all_rounds = []
+        print("how many shapes", len(shapes))
         for s in shapes:
-            # print(s)
-            # print(type(s))
+            print("deal")
             p = list(s.exterior.coords)
-            # print(type(p))
-            # print(p[:4])
-            # print(p[0][1])
-            all_rounds.append(generate_random_roundconer(p))
+
+            all_rounds.append(generate_random_shear_inside_rect(p))
 
         for it in all_rounds:
             it.write_to_txt(gIDnow, path)
@@ -225,3 +373,77 @@ def run_many_times(times):
 
 if __name__ == "__main__":
     run_many_times(36)
+    # # Example usage
+    # sheet_width = 4000
+    # sheet_height = 2000
+    # # 矩形數量
+    # num_rectangles = random.randint(2, 5)
+    # max_rectangle_width = 1000
+    # max_rectangle_height = 1000
+    # gIDnow = 1
+    # shapes = generate_shapes(num_rectangles, sheet_width,
+    #                          sheet_height, max_rectangle_width, max_rectangle_height)
+
+    # plot_shapes(shapes, sheet_width, sheet_height)
+
+    # # print(shapes)
+
+    # # INI
+    # training_cir_rectshear_sheet = []
+    # training_cir_rectshear_sheet.append(["; SYSCONFIG"])
+    # training_cir_rectshear_sheet.append(
+    #     ["; version", "unit flag", "draw speed"])
+    # training_cir_rectshear_sheet.append(["; 2.1", "0(mks) 1(fbs)", "(%)"])
+    # training_cir_rectshear_sheet.append([201, 0, 5, 0, 0, 0, 0, 0, 0, 0,])
+    # training_cir_rectshear_sheet.append([";"])
+    # training_cir_rectshear_sheet.append(["; SYS INT DATA"])
+    # training_cir_rectshear_sheet.append(
+    #     ["; nibble", "nibble", "rect", "shear", "hit1", "hit2", "hit3", "not used"])
+    # training_cir_rectshear_sheet.append(
+    #     ["; arc", "line", "4side", "line", "one", "2nd", "3rd"])
+    # training_cir_rectshear_sheet.append([10, 10, 20, 40, 20, 15, 15, 0, 0, 0])
+    # training_cir_rectshear_sheet.append(
+    #     ["; screw", "tap", "louver", "form", "turret", "not used",])
+    # training_cir_rectshear_sheet.append(["; 1", "1", "1", "4", "rot 90",])
+    # training_cir_rectshear_sheet.append(
+    #     [600, 100, 200, 100, 500, 0, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append([5, 10, 5, 10, 10, 20, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append([";"])
+    # training_cir_rectshear_sheet.append(["; SYS DBL DATA"])
+    # training_cir_rectshear_sheet.append(
+    #     ["; operation time in sec", "distance in meter - unless specified otherwise"])
+    # training_cir_rectshear_sheet.append(
+    #     ["; Vx m/s", "Vy m/s", "Ax m/s2", "Ay m/s2, not used"])
+    # training_cir_rectshear_sheet.append(
+    #     [8, 10, 20, 30, 0., 0., 0., 0., 0., 0.])
+    # training_cir_rectshear_sheet.append(["; not used"])
+    # training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    # training_cir_rectshear_sheet.append(["; gID", "gType", "loopID"])
+    # training_cir_rectshear_sheet.append([0, 0, 0])
+    # training_cir_rectshear_sheet.append(
+    #     ["; table off(x", "y)", "sheet size(x", "y)", "start(edge", "par)", "end(edge", "par)", "thickness"])
+    # training_cir_rectshear_sheet.append(
+    #     [0, 0, 4000, 2000, 4, 0.95, 2, 0.2, 0.062])
+    # training_cir_rectshear_sheet.append(["; "])
+
+    # path = f'./output.txt'
+
+    # with open(path, 'w', newline='') as txtfile:
+    #     writer = csv.writer(txtfile)
+    #     writer.writerows(training_cir_rectshear_sheet)
+
+    # all_rounds = []
+    # print("how many shapes", len(shapes))
+    # for s in shapes:
+    #     print("deal")
+    #     p = list(s.exterior.coords)
+
+    #     all_rounds.append(generate_random_shear_inside_rect(p))
+
+    # for it in all_rounds:
+    #     it.write_to_txt(gIDnow)
+    #     gIDnow += 1
