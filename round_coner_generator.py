@@ -224,4 +224,4 @@ def run_many_times(times):
 
 
 if __name__ == "__main__":
-    run_many_times(36)
+    run_many_times(100)

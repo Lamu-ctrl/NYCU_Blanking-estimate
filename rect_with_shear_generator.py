@@ -107,7 +107,7 @@ class with_sheer_hole:
         self.y3 = self.sides[2][1]
         self.x4 = self.sides[3][0]
         self.y4 = self.sides[3][1]
-        num_shear = random.randint(2, 10)
+        num_shear = random.randint(2, 5)
         shapes, self.raw_xydata = generate_shear_in_rectangle(
             num_shear, self.x1, self.x2, self.y1, self.y3)
         # plt
@@ -176,37 +176,43 @@ def generate_shapes(num_rectangles, sheet_width, sheet_height, max_rectangle_wid
 
 
 def generate_random_rectangle(max_width, max_height, sheet_width, sheet_height):
-    width = random.randint(200, max_width)
-    height = random.randint(200, max_height)
-    x = random.randint(0, sheet_width - width)
-    y = random.randint(0, sheet_height - height)
+    width = random.randint(300, max_width)
+    height = random.randint(300, max_height)
+    x = random.randint(50, sheet_width - width-50)
+    y = random.randint(50, sheet_height - height-50)
     return Polygon([(x, y), (x + width, y), (x + width, y + height), (x, y + height)])
 
 # shear
 
 
-def generate_shear_in_rectangle(num_rectangles, xl, xr, yl, yr):
+def generate_shear_in_rectangle(num_shear_rectangles, xl, xr, yl, yr):
     shapes = []
     raw_xydata = []
     max_try = 200000
     counter = 0
     counter2 = 0
-    while len(shapes) < num_rectangles:
+    # print("{xl}, {xr}, {yl}, {yr} ", xl, xr, yl, yr)
+    while len(shapes) < num_shear_rectangles:
         counter += 1
+        # # 隨機角度
+        # new_shape, xydata = generate_random_rotated_rectangle(
+        #     xl, xr, yl, yr, degree=random.randint(15, 75))
+
+        # fix degreee
         new_shape, xydata = generate_random_rotated_rectangle(
-            xl, xr, yl, yr, degree=random.randint(15, 75))
+            xl, xr, yl, yr, 45)
 
         if not any(new_shape.intersects(shape) for shape in shapes):
-            if new_shape.within(Polygon([(xl, yl), (xl, xl), (xr, yr), (xl, yr)])):
+            if new_shape.within(Polygon([(xl, yl), (xr, yl), (xr, yr), (xl, yr)])):
                 shapes.append(new_shape)
                 raw_xydata.append(xydata)
         if counter >= max_try:
-            break
-            if counter2 >= 5:
+
+            if counter2 >= 10:
                 break
 
             counter2 += 1
-            print("clear")
+            print("clear ", counter2)
             shapes.clear()
             raw_xydata.clear()
             counter = 0
@@ -215,14 +221,17 @@ def generate_shear_in_rectangle(num_rectangles, xl, xr, yl, yr):
 
 
 def generate_random_rotated_rectangle(xl, xr, yl, yr, degree=30):
-    width = random.randint(20, int(abs(xr-xl)/3))
-    height = random.randint(20, int(abs(yr-yl)/3))
-    x = random.randint(xl, xr - width)
-    y = random.randint(yl, yr - height)
+    # 生成出來的小正方形 長、寬
+    width = random.randint(20, int(abs(xr-xl)/2))
+    height = random.randint(20, int(abs(yr-yl)/2))
+    # 不貼邊
+    x = random.randint(xl+2, xr - width-50)
+    y = random.randint(yl+2, yr - height-50)
 
     #旋轉: [(x, y), (x + width, y), (x + width, y + height), (x, y + height)]
 
     # Define the rectangle as a list of points
+    # 左下 又下 右上 左上
     rectangle_points = [[x, y], [x + width, y],
                         [x + width, y + height], [x, y + height]]
     rotated_rectangle_points = rotate(rectangle_points, 0, degree)
@@ -359,9 +368,9 @@ def run_many_times(times):
             writer.writerows(training_cir_rectshear_sheet)
 
         all_rounds = []
-        print("how many shapes", len(shapes))
+
         for s in shapes:
-            print("deal")
+
             p = list(s.exterior.coords)
 
             all_rounds.append(generate_random_shear_inside_rect(p))
@@ -372,7 +381,7 @@ def run_many_times(times):
 
 
 if __name__ == "__main__":
-    run_many_times(36)
+    run_many_times(100)
     # # Example usage
     # sheet_width = 4000
     # sheet_height = 2000
