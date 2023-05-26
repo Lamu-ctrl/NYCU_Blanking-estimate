@@ -121,7 +121,7 @@ class with_sheer_hole:
         return [self.w, self.video_counter, self.video, self.note_counter, self.note]
 
     def write_to_txt(self, gID, path):
-        counter = 0
+        counter = 1
         f = open(path, 'a+', encoding='UTF-8')
 
         print(f"; rect part", file=f)
@@ -135,13 +135,14 @@ class with_sheer_hole:
             print(
                 f"; gID, gType, iUserSetID, parentID, rotmiliDeg, iAppRef, iCamAttr, iRevEngF, ", file=f)
             print(
-                f"{gID*10000+counter}, 30, 4, 0, {row[4]*1000}, 0, 16, 1, ", file=f)
+                f"{gID+counter}, 30, {gID+counter}, {gID}, {row[4]*1000}, 0, 0, 1, ", file=f)
             print(f";x1, y1, x2, y2, x3, y3, x4, y4,", file=f)
             print(
                 f"{row[0][0]}, {row[0][1]}, {row[1][0]}, {row[1][1]}, {row[2][0]},  {row[2][1]}, {row[3][0]},  {row[3][1]}, ", file=f)
             counter += 1
 
         f.close()
+        return gID+counter
 
 
 def plot_shapes(shapes, sheet_width, sheet_height):
@@ -376,8 +377,8 @@ def run_many_times(times):
             all_rounds.append(generate_random_shear_inside_rect(p))
 
         for it in all_rounds:
-            it.write_to_txt(gIDnow, path)
-            gIDnow += 1
+            lastgID = it.write_to_txt(gIDnow, path)
+            gIDnow = lastgID+1
 
 
 if __name__ == "__main__":
