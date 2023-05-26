@@ -1,0 +1,16 @@
+chromedriver
+chromedriver.exe
+bitget_cookie.json
+config.py
+BTCUSDT.json
+ETHUSDT.json
+analyze_trader_log/
+simulate_trader_log/*
+!simulate_trader_log/portfolio_example
+portfolio/*
+!portfolio/portfolio_with_good_traders
+!portfolio/portfolio_optimize_template
+!portfolio/portfolio_example
+__pycache__
+*.pyc
+test.py
