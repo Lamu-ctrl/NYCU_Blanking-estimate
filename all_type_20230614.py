@@ -3,10 +3,9 @@ import numpy as np
 import csv
 import random
 from operator import itemgetter, attrgetter  # sort 排序時用
-import time
+
 
 ################## readfile ########################
-
 
 def readfile(path):
 
@@ -149,11 +148,12 @@ def data_to_function(wholedata):
         elif (onerow_data[7] == 0) & (onerow_data[1] == 32) & (len(onerow_data) == 9):  # circle圓
             parentID = onerow_data[3]  # 取出圓的parentID
             one_cir_var = wholedata[k+1]
-            one_cir_var.append(parentID)
+            one_cir_var.append(parentID)  # one_cir_var[4] = parentID
             one_cir_var.append(onerow_data[7])  # punch type
             one_cir_var.append(onerow_data[0])  # gID
+            one_cir_var.append(0)
 
-            # one_cir_var = [radius, start_at_degrees, centerX, centerY, parentID, punch type, gID]
+            # one_cir_var = [radius, start_at_degrees, centerX, centerY, parentID, punch type, gID, sub_serial_num = 0]
             circle_var.append(one_cir_var)  # 抓取圓形資料
             k = k+2  # 將下一行也跳過
 
@@ -1408,8 +1408,6 @@ def moving_time(moving_type, movement):
 def feature_calc(xy_data, path):
     time1 = 0  # record punch time
     time2 = 0  # record moving time
-    sheet_bias1 = random.uniform(0.90, 1.10)
-    sheet_bias2 = random.uniform(0.90, 1.10)
 
     single_hit = 0
     nibbling_hit = 0
@@ -1429,13 +1427,6 @@ def feature_calc(xy_data, path):
     Ay = 30
 
     feature_data = []
-
-    part_3 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    part_13 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    part_23 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    part_121 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    part_219 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    part_317 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     '''
     feature_data.append([" ","horizontal line hit","vertical line hit","single hit","nibbling hit",
              "shear hit","horizontal part move","vertical part move","horizontal tool in-btwn move",
@@ -1446,731 +1437,146 @@ def feature_calc(xy_data, path):
     pre_pt = [0, 0, 0, 0, 0, 0]
     for ix in range(len(xy_data)):
 
-        # xy_data -> [x, y, tool_num, hit_type, serial_num(gID), sub_serial_num]
+        ## [x, y, tool_num, hit_type, serial_num, sub_serial_num]
         one_xy_data = xy_data[ix]
         tool_num = one_xy_data[2]
-        serial_num = one_xy_data[4]
-
         x_move = abs(one_xy_data[0] - pre_pt[0])  # x向移動
         y_move = abs(one_xy_data[1] - pre_pt[1])  # y向移動
 
         if (ix < (len(xy_data) - 1)):  # 取下把刀資訊
             next_xy_data = xy_data[ix+1]
+        # print(pre_pt)
+        # print(one_xy_data)
 
-        # line_xy.append([line_x, line_y, tool_num, hit_type, line_serial_num, sub_serial_num, ishole]
         if pre_pt[4] != one_xy_data[4]:  # 同把刀換新線段
 
             # move
             if ((x_move * Ay/Ax) >= y_move):  # time
-                a_time = moving_time(0, x_move)
-                time2 += a_time
+                time2 += moving_time(0, x_move)
                 horizontal_part_move += x_move
-                if (serial_num < 13):
-                    part_3[0] += a_time
-                    part_3[6] += x_move
-                elif (serial_num < 23):
-                    part_13[0] += a_time
-                    part_13[6] += x_move
-                elif (serial_num < 121):
-                    part_23[0] += a_time
-                    part_23[6] += x_move
-                elif (serial_num < 219):
-                    part_121[0] += a_time
-                    part_121[6] += x_move
-                elif (serial_num < 317):
-                    part_219[0] += a_time
-                    part_219[6] += x_move
-                else:
-                    part_317[13] += a_time
-                    part_317[6] += x_move
             else:
-                a_time = moving_time(1, y_move)
-                time2 += a_time
+                time2 += moving_time(1, y_move)
                 vertical_part_move += y_move
-                if (serial_num < 13):
-                    part_3[0] += a_time
-                    part_3[7] += y_move
-                elif (serial_num < 23):
-                    part_13[0] += a_time
-                    part_13[7] += y_move
-                elif (serial_num < 121):
-                    part_23[0] += a_time
-                    part_23[7] += y_move
-                elif (serial_num < 219):
-                    part_121[0] += a_time
-                    part_121[7] += y_move
-                elif (serial_num < 317):
-                    part_219[0] += a_time
-                    part_219[7] += y_move
-                else:
-                    part_317[0] += a_time
-                    part_317[7] += y_move
+
             # punch
             if one_xy_data[3] == 16:  # 16-> single hit
-                b_time = punch_time(0, tool_num)
-                time1 += b_time
                 single_hit += 1
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[3] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[3] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[3] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[3] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[3] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[3] += 1
+                time1 += punch_time(0, tool_num)
 
             elif one_xy_data[3] == 17:  # 17-> along a line hit
-                b_time = punch_time(0, tool_num)
-                time1 += b_time
                 single_hit += 1
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[3] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[3] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[3] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[3] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[3] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[3] += 1
+                time1 += punch_time(0, tool_num)
 
             elif one_xy_data[3] == 18:  # 18-> grid
-                b_time = punch_time(0, tool_num)
-                time1 += b_time
                 single_hit += 1
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[3] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[3] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[3] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[3] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[3] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[3] += 1
+                time1 += punch_time(0, tool_num)
 
             elif one_xy_data[3] == 20:  # 20-> arc
-                b_time = punch_time(1, tool_num)
-                time1 += b_time
                 nibbling_hit += 1
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[4] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[4] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[4] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[4] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[4] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[4] += 1
+                time1 += punch_time(1, tool_num)
 
             elif one_xy_data[3] == 33:  # 33-> along 4 sides using a square tool
                 if next_xy_data[0] == one_xy_data[0]:  # 打垂直方向時
-                    b_time = punch_time(3, tool_num)
-                    time1 += b_time
                     vertical_line_hit += 1
-                    if (serial_num < 13):
-                        part_3[13] += b_time
-                        part_3[2] += 1
-                    elif (serial_num < 23):
-                        part_13[13] += b_time
-                        part_13[2] += 1
-                    elif (serial_num < 121):
-                        part_23[13] += b_time
-                        part_23[2] += 1
-                    elif (serial_num < 219):
-                        part_121[13] += b_time
-                        part_121[2] += 1
-                    elif (serial_num < 317):
-                        part_219[13] += b_time
-                        part_219[2] += 1
-                    else:
-                        part_317[13] += b_time
-                        part_317[2] += 1
+                    time1 += punch_time(3, tool_num)
 
                 elif next_xy_data[1] == one_xy_data[1]:  # 打水平方向時
-                    b_time = punch_time(2, tool_num)
-                    time1 += b_time
                     horizontal_line_hit += 1
-                    if (serial_num < 13):
-                        part_3[13] += b_time
-                        part_3[1] += 1
-                    elif (serial_num < 23):
-                        part_13[13] += b_time
-                        part_13[1] += 1
-                    elif (serial_num < 121):
-                        part_23[13] += b_time
-                        part_23[1] += 1
-                    elif (serial_num < 219):
-                        part_121[13] += b_time
-                        part_121[1] += 1
-                    elif (serial_num < 317):
-                        part_219[13] += b_time
-                        part_219[1] += 1
-                    else:
-                        part_317[13] += b_time
-                        part_317[1] += 1
+                    time1 += punch_time(2, tool_num)
 
             elif one_xy_data[3] == 34:  # 34-> along a line (shear)
                 if one_xy_data[2] == -1:  # round tool
-                    b_time = punch_time(1, tool_num)
-                    time1 += b_time
                     nibbling_hit += 1
-                    if (serial_num < 13):
-                        part_3[13] += b_time
-                        part_3[4] += 1
-                    elif (serial_num < 23):
-                        part_13[13] += b_time
-                        part_13[4] += 1
-                    elif (serial_num < 121):
-                        part_23[13] += b_time
-                        part_23[4] += 1
-                    elif (serial_num < 219):
-                        part_121[13] += b_time
-                        part_121[4] += 1
-                    elif (serial_num < 317):
-                        part_219[13] += b_time
-                        part_219[4] += 1
-                    else:
-                        part_317[13] += b_time
-                        part_317[4] += 1
-
-                else:                   # rect tool
-                    b_time = punch_time(4, tool_num)
-                    time1 += b_time
+                    time1 += punch_time(1, tool_num)
+                else:       # rect tool
                     shear_hit += 1
-                    if (serial_num < 13):
-                        part_3[13] += b_time
-                        part_3[5] += 1
-                    elif (serial_num < 23):
-                        part_13[13] += b_time
-                        part_13[5] += 1
-                    elif (serial_num < 121):
-                        part_23[13] += b_time
-                        part_23[5] += 1
-                    elif (serial_num < 219):
-                        part_121[13] += b_time
-                        part_121[5] += 1
-                    elif (serial_num < 317):
-                        part_219[13] += b_time
-                        part_219[5] += 1
-                    else:
-                        part_317[13] += b_time
-                        part_317[5] += 1
+                    time1 += punch_time(4, tool_num)
 
             elif one_xy_data[3] == 39:  # 39-> arc
-                b_time = punch_time(1, tool_num)
-                time1 += b_time
                 nibbling_hit += 1
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[4] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[4] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[4] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[4] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[4] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[4] += 1
+                time1 += punch_time(1, tool_num)
 
         else:  # 同把刀、同線段，持續加工
             if one_xy_data[3] == 16:  # 16-> single hit
                 single_hit += 1
-                b_time = punch_time(0, tool_num)
-                time1 += b_time
+                time1 += punch_time(0, tool_num)
 
                 if ((x_move * Ay / Ax) >= y_move):  # time
-                    a_time = moving_time(0, x_move)
-                    time2 += a_time
+                    time2 += moving_time(0, x_move)
                     horizontal_part_move += x_move
-
-                    if (serial_num < 13):
-                        part_3[3] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[6] += x_move
-                    elif (serial_num < 23):
-                        part_13[3] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[6] += x_move
-                    elif (serial_num < 121):
-                        part_23[3] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[6] += x_move
-                    elif (serial_num < 219):
-                        part_121[3] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[6] += x_move
-                    elif (serial_num < 317):
-                        part_219[3] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[6] += x_move
-                    else:
-                        part_317[3] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[6] += x_move
                 else:
-                    a_time = moving_time(1, y_move)
-                    time2 += a_time
+                    time2 += moving_time(1, y_move)
                     vertical_part_move += y_move
-                    if (serial_num < 13):
-                        part_3[3] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[7] += y_move
-                    elif (serial_num < 23):
-                        part_13[3] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[7] += y_move
-                    elif (serial_num < 121):
-                        part_23[3] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[7] += y_move
-                    elif (serial_num < 219):
-                        part_121[3] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[7] += y_move
-                    elif (serial_num < 317):
-                        part_219[3] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[7] += y_move
-                    else:
-                        part_317[3] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[7] += y_move
 
             elif one_xy_data[3] == 17:  # 17-> along a line hit
                 single_hit += 1
-                b_time = punch_time(0, tool_num)
-                time1 += b_time
+                time1 += punch_time(0, tool_num)
 
                 if ((x_move * Ay / Ax) >= y_move):  # time
-                    a_time = moving_time(0, x_move)
-                    time2 += a_time
+                    time2 += moving_time(0, x_move)
                     horizontal_part_move += x_move
-                    if (serial_num < 13):
-                        part_3[3] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[6] += x_move
-                    elif (serial_num < 23):
-                        part_13[3] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[6] += x_move
-                    elif (serial_num < 121):
-                        part_23[3] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[6] += x_move
-                    elif (serial_num < 219):
-                        part_121[3] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[6] += x_move
-                    elif (serial_num < 317):
-                        part_219[3] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[6] += x_move
-                    else:
-                        part_317[3] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[6] += x_move
                 else:
-                    a_time = moving_time(1, y_move)
-                    time2 += a_time
+                    time2 += moving_time(1, y_move)
                     vertical_part_move += y_move
-                    if (serial_num < 13):
-                        part_3[3] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[7] += y_move
-                    elif (serial_num < 23):
-                        part_13[3] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[7] += y_move
-                    elif (serial_num < 121):
-                        part_23[3] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[7] += y_move
-                    elif (serial_num < 219):
-                        part_121[3] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[7] += y_move
-                    elif (serial_num < 317):
-                        part_219[3] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[7] += y_move
-                    else:
-                        part_317[3] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[7] += y_move
 
             elif one_xy_data[3] == 18:  # 18-> grid
                 single_hit += 1
-                b_time = punch_time(0, tool_num)
-                time1 += b_time
+                time1 += punch_time(0, tool_num)
 
                 if ((x_move * Ay / Ax) >= y_move):  # time
-                    a_time = moving_time(0, x_move)
-                    time2 += a_time
+                    time2 += moving_time(0, x_move)
                     horizontal_part_move += x_move
-                    if (serial_num < 13):
-                        part_3[3] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[6] += x_move
-                    elif (serial_num < 23):
-                        part_13[3] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[6] += x_move
-                    elif (serial_num < 121):
-                        part_23[3] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[6] += x_move
-                    elif (serial_num < 219):
-                        part_121[3] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[6] += x_move
-                    elif (serial_num < 317):
-                        part_219[3] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[6] += x_move
-                    else:
-                        part_317[3] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[6] += x_move
                 else:
-                    a_time = moving_time(1, y_move)
-                    time2 += a_time
+                    time2 += moving_time(1, y_move)
                     vertical_part_move += y_move
-                    if (serial_num < 13):
-                        part_3[3] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[7] += y_move
-                    elif (serial_num < 23):
-                        part_13[3] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[7] += y_move
-                    elif (serial_num < 121):
-                        part_23[3] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[7] += y_move
-                    elif (serial_num < 219):
-                        part_121[3] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[7] += y_move
-                    elif (serial_num < 317):
-                        part_219[3] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[7] += y_move
-                    else:
-                        part_317[3] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[7] += y_move
 
             elif one_xy_data[3] == 20:  # arc
                 nibbling_hit += 1
-                b_time = punch_time(1, tool_num)
-                time1 += b_time
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[4] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[4] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[4] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[4] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[4] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[4] += 1
+                time1 += punch_time(1, tool_num)
 
             elif one_xy_data[3] == 33:  # along 4 sides using a square tool
                 if x_move == 0:  # 打垂直方向時
                     vertical_line_hit += 1
-                    b_time = punch_time(3, tool_num)
-                    time1 += b_time
+                    time1 += punch_time(3, tool_num)
+
                     vertical_tool_in_btwn_move += y_move
-                    a_time = moving_time(3, y_move)
-                    time2 += a_time
-                    if (serial_num < 13):
-                        part_3[2] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[9] += y_move
-                    elif (serial_num < 23):
-                        part_13[2] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[9] += y_move
-                    elif (serial_num < 121):
-                        part_23[2] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[9] += y_move
-                    elif (serial_num < 219):
-                        part_121[2] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[9] += y_move
-                    elif (serial_num < 317):
-                        part_219[2] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[9] += y_move
-                    else:
-                        part_317[2] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[9] += y_move
+                    time2 += moving_time(3, y_move)
 
                 elif y_move == 0:  # 打水平方向時
                     horizontal_line_hit += 1
-                    b_time = punch_time(2, tool_num)
-                    time1 += b_time
+                    time1 += punch_time(2, tool_num)
+
                     horizontal_tool_in_btwn_move += x_move
-                    a_time = moving_time(2, x_move)
-                    time2 += a_time
-                    if (serial_num < 13):
-                        part_3[1] += 1
-                        part_3[13] += b_time
-                        part_3[0] += a_time
-                        part_3[8] += x_move
-                    elif (serial_num < 23):
-                        part_13[1] += 1
-                        part_13[13] += b_time
-                        part_13[0] += a_time
-                        part_13[8] += x_move
-                    elif (serial_num < 121):
-                        part_23[1] += 1
-                        part_23[13] += b_time
-                        part_23[0] += a_time
-                        part_23[8] += x_move
-                    elif (serial_num < 219):
-                        part_121[1] += 1
-                        part_121[13] += b_time
-                        part_121[0] += a_time
-                        part_121[8] += x_move
-                    elif (serial_num < 317):
-                        part_219[1] += 1
-                        part_219[13] += b_time
-                        part_219[0] += a_time
-                        part_219[8] += x_move
-                    else:
-                        part_317[1] += 1
-                        part_317[13] += b_time
-                        part_317[0] += a_time
-                        part_317[8] += x_move
+                    time2 += moving_time(2, x_move)
 
             elif one_xy_data[3] == 34:  # along a line (shear)
                 if one_xy_data[2] == -1:  # round tool
                     nibbling_hit += 1
-                    b_time = punch_time(1, tool_num)
-                    time1 += b_time
-                    if (serial_num < 13):
-                        part_3[13] += b_time
-                        part_3[4] += 1
-                    elif (serial_num < 23):
-                        part_13[13] += b_time
-                        part_13[4] += 1
-                    elif (serial_num < 121):
-                        part_23[13] += b_time
-                        part_23[4] += 1
-                    elif (serial_num < 219):
-                        part_121[13] += b_time
-                        part_121[4] += 1
-                    elif (serial_num < 317):
-                        part_219[13] += b_time
-                        part_219[4] += 1
-                    else:
-                        part_317[13] += b_time
-                        part_317[4] += 1
-
+                    time1 += punch_time(1, tool_num)
                 else:  # rect tool
                     shear_hit += 1
-                    b_time = punch_time(4, tool_num)
-                    time1 += b_time
+                    time1 += punch_time(4, tool_num)
 
                     if ((x_move * Ay/Ax) >= y_move):  # time
-                        a_time = moving_time(4, x_move)
-                        time2 += a_time
+                        time2 += moving_time(4, x_move)
                         horizontal_tool_shear_in_btwn_move += x_move
-                        if (serial_num < 13):
-                            part_3[5] += 1
-                            part_3[13] += b_time
-                            part_3[0] += a_time
-                            part_3[10] += x_move
-                        elif (serial_num < 23):
-                            part_13[5] += 1
-                            part_13[13] += b_time
-                            part_13[0] += a_time
-                            part_13[10] += x_move
-                        elif (serial_num < 121):
-                            part_23[5] += 1
-                            part_23[13] += b_time
-                            part_23[0] += a_time
-                            part_23[10] += x_move
-                        elif (serial_num < 219):
-                            part_121[5] += 1
-                            part_121[13] += b_time
-                            part_121[0] += a_time
-                            part_121[10] += x_move
-                        elif (serial_num < 317):
-                            part_219[5] += 1
-                            part_219[13] += b_time
-                            part_219[0] += a_time
-                            part_219[10] += x_move
-                        else:
-                            part_317[5] += 1
-                            part_317[13] += b_time
-                            part_317[0] += a_time
-                            part_317[10] += x_move
                     else:
-                        a_time = moving_time(5, y_move)
-                        time2 += a_time
+                        time2 += moving_time(5, y_move)
                         vertical_tool_shear_in_btwn_move += y_move
-                        if (serial_num < 13):
-                            part_3[5] += 1
-                            part_3[13] += b_time
-                            part_3[0] += a_time
-                            part_3[11] += y_move
-                        elif (serial_num < 23):
-                            part_13[5] += 1
-                            part_13[13] += b_time
-                            part_13[0] += a_time
-                            part_13[11] += y_move
-                        elif (serial_num < 121):
-                            part_23[5] += 1
-                            part_23[13] += b_time
-                            part_23[0] += a_time
-                            part_23[1] += y_move
-                        elif (serial_num < 219):
-                            part_121[5] += 1
-                            part_121[13] += b_time
-                            part_121[0] += a_time
-                            part_121[11] += y_move
-                        elif (serial_num < 317):
-                            part_219[5] += 1
-                            part_219[13] += b_time
-                            part_219[0] += a_time
-                            part_219[11] += y_move
-                        else:
-                            part_317[5] += 1
-                            part_317[13] += b_time
-                            part_317[0] += a_time
-                            part_317[11] += y_move
 
             elif one_xy_data[3] == 39:  # arc
                 nibbling_hit += 1
-                b_time = punch_time(1, tool_num)
-                time1 += b_time
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[4] += 1
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[4] += 1
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[4] += 1
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[4] += 1
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[4] += 1
-                else:
-                    part_317[13] += b_time
-                    part_317[4] += 1
+                time1 += punch_time(1, tool_num)
 
             elif one_xy_data[3] == 40:  # single * 2
                 for i in range(2):
-                    single_hit += 2
-                    b_time = punch_time(0, tool_num) * 2
-                    time1 += b_time
+                    single_hit += 1
+                    time1 += punch_time(0, tool_num)*2
 
             elif one_xy_data[3] == 50:  # single * 3
                 for i in range(3):
-                    single_hit += 3
-                    b_time = punch_time(0, tool_num) * 3
-                    time1 += b_time
+                    single_hit += 1
+                    time1 += punch_time(0, tool_num)*3
 
         if (ix != (len(xy_data) - 1)):    # 當不是最後一點時，進入迴圈
             # 下把刀要換刀時，會先把點為歸零；沒有換刀就將pre_pt改成現在的點
@@ -2178,79 +1584,38 @@ def feature_calc(xy_data, path):
             if (one_xy_data[2] != next_xy_data[2]) & (any(pre_pt)):  # 換刀時，前一點必為原點
                 pre_pt = [0, 0, 0, 0, 0, 0]
                 turret_tool_change += 90
-                b_time = punch_time(5, tool_num)
-                time1 += b_time
+                time1 += punch_time(5, tool_num)
                 # 預設每次換刀turret轉90度
-                if (serial_num < 13):
-                    part_3[13] += b_time
-                    part_3[12] += 90
-                elif (serial_num < 23):
-                    part_13[13] += b_time
-                    part_13[12] += 90
-                elif (serial_num < 121):
-                    part_23[13] += b_time
-                    part_23[12] += 90
-                elif (serial_num < 219):
-                    part_121[13] += b_time
-                    part_121[12] += 90
-                elif (serial_num < 317):
-                    part_219[13] += b_time
-                    part_219[12] += 90
-                else:
-                    part_317[13] += b_time
-                    part_317[12] += 90
-
             else:
                 pre_pt = one_xy_data
 
-        with open("time_discuss.txt", 'a+', newline='') as txtfile:
-            print(one_xy_data, file=txtfile)
-            print("total:", round(a_time+b_time, 4), "move:", round(a_time, 4), "punch: ", round(b_time, 4), " dis ",
-                  round(a_time/(a_time+b_time), 2), round(b_time/(a_time+b_time), 2), "  one_xy_data[3] ", one_xy_data[3], file=txtfile)
-        # print("total:", round(a_time+b_time, 4), "move:", round(a_time, 4), "punch: ", round(b_time, 4), " dis ",
-        #       round(a_time/(a_time+b_time), 2), round(b_time/(a_time+b_time), 2), "  one_xy_data[3] ", one_xy_data[3])
-        # time.sleep(0.1)
         # END ##for ix in range(len(xy_data))
-    if vertical_tool_shear_in_btwn_move < 1.0e-5:
-        vertical_tool_shear_in_btwn_move = 0
     print(f'punch time : {time1}')
     print(f'moving time : {time2}')
-    total_time = time1 * sheet_bias1 + time2 * sheet_bias2
-    part_3[13] = part_3[13] * sheet_bias1 + part_3[0] * sheet_bias2
-    part_3[0] = "Part E"
-    part_13[13] = part_13[13] * sheet_bias1 + part_13[0] * sheet_bias2
-    part_13[0] = "Part F"
-    part_23[13] = part_23[13] * sheet_bias1 + part_23[0] * sheet_bias2
-    part_23[0] = "Part A"
-    part_121[13] = part_121[13] * sheet_bias1 + part_121[0] * sheet_bias2
-    part_121[0] = "Part B"
-    part_219[13] = part_219[13] * sheet_bias1 + part_219[0] * sheet_bias2
-    part_219[0] = "Part C"
-    part_317[13] = part_317[13] * sheet_bias1 + part_317[0] * sheet_bias2
-    part_317[0] = "Part D"
-
+    total_time = time1 + time2
+    feature_data = [path, horizontal_line_hit, vertical_line_hit, single_hit, nibbling_hit, shear_hit,
+                    horizontal_part_move, vertical_part_move, horizontal_tool_in_btwn_move,
+                    vertical_tool_in_btwn_move, horizontal_tool_shear_in_btwn_move, vertical_tool_shear_in_btwn_move,
+                    turret_tool_change, total_time]
+    return feature_data
     '''
-    feature_data = [path , horizontal_line_hit, vertical_line_hit, single_hit, nibbling_hit, shear_hit,\
+    total_time = time1 + time2
+    feature_data.append([path , horizontal_line_hit, vertical_line_hit, single_hit, nibbling_hit, shear_hit,\
                          horizontal_part_move, vertical_part_move, horizontal_tool_in_btwn_move,\
                          vertical_tool_in_btwn_move, horizontal_tool_shear_in_btwn_move, vertical_tool_shear_in_btwn_move,\
-                         turret_tool_change, total_time]
-    '''
-    feature_data.append([path, horizontal_line_hit, vertical_line_hit, single_hit, nibbling_hit, shear_hit,
-                         horizontal_part_move, vertical_part_move, horizontal_tool_in_btwn_move,
-                         vertical_tool_in_btwn_move, horizontal_tool_shear_in_btwn_move, vertical_tool_shear_in_btwn_move,
                          turret_tool_change, total_time])
-    feature_data.append(part_3)
-    feature_data.append(part_13)
-    feature_data.append(part_23)
-    feature_data.append(part_121)
-    feature_data.append(part_219)
-    feature_data.append(part_317)
-    return feature_data
-
+    
+    fea_path = path + "_fea.csv"
+    with open(fea_path ,'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(feature_data)
+    return 0
+    '''
 
 ################## feature_calc end ###################
 
 ########################## main #########################
+
 
 if __name__ == '__main__':
 
@@ -2260,19 +1625,18 @@ if __name__ == '__main__':
                     "vertical tool in-btwn move", "horizontal tool shear in-btwn move",
                     "vertical tool shear in-btwn move", "turret tool change deg", "total time"])
 
-    path = 'Demo_Sheet_graph'
-    sheet_num = 1
+    path = 'Cir_Training_SheetA'
+    sheet_num = 25
 
     for sn in range(sheet_num):
 
-        print("\n Input : " + path + ".txt\n")  # str(sn) +
-        wholedata, row_data = readfile(path + ".txt")
-        # wholedata, row_data = readfile(path + str(sn) + ".txt")
-
+        print("input : " + path + str(sn) + ".txt\n")
+        wholedata, row_data = readfile(path + str(sn) + ".txt")
+        # wholedata, row_data = readfile(path + ".txt")
         line_var, rect_var, circle_var, arc_var, polygon_var = data_to_function(
             wholedata)
 
-        station = np.zeros([15, 3])  # 刀具規格[長, 寬, 角度]
+        station = np.zeros([13, 3])  # 刀具規格[長, 寬, 角度]
         station[0, :] = [20, 4,  0]
         station[1, :] = [20, 4, 90]
         station[2, :] = [10, 2, 30]
@@ -2286,15 +1650,14 @@ if __name__ == '__main__':
         station[10, :] = [2.5, 0, -1]  # 角度-1設為圓刀([半徑, 0, -1])
         station[11, :] = [10, 0, -1]
         station[12, :] = [10, 10, 45]
-        station[13, :] = [5, 5, 0]
-        station[14, :] = [10, 2, 90]
+
         xy_data = []
 
         # rect
         all_rect = []
 
         for k1 in range(len(rect_var)):
-            rect_serial_num = k1
+
             one_rect_var = rect_var[k1]
             L = one_rect_var[0]
             H = one_rect_var[1]
@@ -2318,11 +1681,12 @@ if __name__ == '__main__':
                 for j1 in range(len(hole_xy_data)):
                     j2 = hole_xy_data[j1]
                     all_rect.append(j2)
+        # rect_var->[L, H, star point,   parentID,   punch_type,   roDeg, serial_num, sub_serial_num]
 
         # line
         all_line = []
         for k2 in range(len(line_var)):
-            line_serial_num = 100 + k2
+
             one_line_var = line_var[k2]
             line_start_x = one_line_var[0]
             line_start_y = one_line_var[1]
@@ -2331,7 +1695,7 @@ if __name__ == '__main__':
             offset_index = one_line_var[4]  # parentID
             line_serial_num = one_line_var[5]
             line_sub_serial_num = one_line_var[6]
-            overlap = 0
+            overlap = 1
 
             line_xy = line(line_start_x, line_start_y, distance, line_deg, station, offset_index,
                            line_serial_num, line_sub_serial_num, overlap)
@@ -2340,14 +1704,15 @@ if __name__ == '__main__':
                 j2 = line_xy[j1]
                 all_line.append(j2)
 
-            #line_var.append([one_x, one_y, dis, deg, parentID])
-            #line(line_start_x, line_start_y, distance, line_deg, tool, offset_index)
+        # line_var->[current_x, current_y, dis, deg, parentID, poly_gID, sub_serial_num]
+        # line(line_start_x, line_start_y, distance, line_deg, station, offset_index,\
+        #                  line_serial_num, line_sub_serial_num, overlap)
 
         # circle
         all_cir = []
 
         for k3 in range(len(circle_var)):
-            cir_serial_num = 200 + k3
+            cir_serial_num = k3
             one_circle_var = circle_var[k3]
             r = one_circle_var[0]
             start_deg = one_circle_var[1]
@@ -2366,7 +1731,7 @@ if __name__ == '__main__':
         all_arc = []
 
         for k4 in range(len(arc_var)):
-            arc_serial_num = 300 + k4
+
             one_arc_var = arc_var[k4]
             cen_x = one_arc_var[0]
             cen_y = one_arc_var[1]
@@ -2419,15 +1784,11 @@ if __name__ == '__main__':
             6, 2), reverse=True)  # 重新排列，以6、2 的位置排
 
         graphic_data = graph(xy_data, station)
-        #feature_data = feature_calc(xy_data, path + str(sn))
-        # feature.append(feature_data)
+        feature_data = feature_calc(xy_data, path + str(sn))
+        feature.append(feature_data)
 
-        feature_data = feature_calc(xy_data, "Demo_sheet")
-        for k in feature_data:
-            feature.append(k)
-
-        #txt_path = path + str(sn) + "_result.txt"
-        txt_path = path + "_result.txt"
+        txt_path = path + str(sn) + "_result.txt"
+        # txt_path = "rect_shear" + str(sn) + "_result.txt"
         with open(txt_path, 'w', newline='') as txtfile:
             writer = csv.writer(txtfile)
             writer.writerows(graphic_data)
