@@ -4,9 +4,12 @@ import csv
 import random
 from operator import itemgetter, attrgetter  # sort 排序時用
 import alogo  # 最短路徑
-
+from multiprocessing import Process, Pool
+import os
+import time
 
 ################## readfile ########################
+
 
 def readfile(path):
 
@@ -1618,6 +1621,177 @@ def feature_calc(xy_data, path):
 ########################## main #########################
 
 
+def tofeature(sn):
+
+    print("input : " + path + str(sn) + ".txt\n")
+    wholedata, row_data = readfile(path + str(sn) + ".txt")
+    # wholedata, row_data = readfile(path + ".txt")
+    line_var, rect_var, circle_var, arc_var, polygon_var = data_to_function(
+        wholedata)
+
+    station = np.zeros([13, 3])  # 刀具規格[長, 寬, 角度]
+    station[0, :] = [20, 4,  0]
+    station[1, :] = [20, 4, 90]
+    station[2, :] = [10, 2, 30]
+    station[3, :] = [10, 2, 45]
+    station[4, :] = [10, 2, 60]
+    station[5, :] = [10, 2, 120]
+    station[6, :] = [10, 2, 135]
+    station[7, :] = [10, 2, 150]
+    station[8, :] = [10, 10, 0]
+    station[9, :] = [1.5, 0, -1]
+    station[10, :] = [2.5, 0, -1]  # 角度-1設為圓刀([半徑, 0, -1])
+    station[11, :] = [10, 0, -1]
+    station[12, :] = [10, 10, 45]
+
+    xy_data = []
+
+    # rect
+    all_rect = []
+
+    for k1 in range(len(rect_var)):
+
+        one_rect_var = rect_var[k1]
+        L = one_rect_var[0]
+        H = one_rect_var[1]
+        sp1 = one_rect_var[2]
+        parentID = one_rect_var[3]
+        punch_type = one_rect_var[4]
+        roDeg = one_rect_var[5]
+        rect_serial_num = one_rect_var[6]
+        rect_subserial_num = one_rect_var[7]
+
+        if parentID == 0:  # rect_outside_edge
+            rect_xy = rect_outside_edge(
+                L, H, sp1, station, roDeg, rect_serial_num)
+            for j1 in range(len(rect_xy)):
+                j2 = rect_xy[j1]
+                all_rect.append(j2)
+
+        else:  # hole
+            hole_xy_data = rect_hole(
+                L, H, sp1, punch_type, station, roDeg, rect_serial_num, rect_subserial_num)
+            for j1 in range(len(hole_xy_data)):
+                j2 = hole_xy_data[j1]
+                all_rect.append(j2)
+    # rect_var->[L, H, star point,   parentID,   punch_type,   roDeg, serial_num, sub_serial_num]
+
+    # line
+    all_line = []
+    for k2 in range(len(line_var)):
+
+        one_line_var = line_var[k2]
+        line_start_x = one_line_var[0]
+        line_start_y = one_line_var[1]
+        distance = one_line_var[2]
+        line_deg = one_line_var[3]
+        offset_index = one_line_var[4]  # parentID
+        line_serial_num = one_line_var[5]
+        line_sub_serial_num = one_line_var[6]
+        overlap = 1
+
+        line_xy = line(line_start_x, line_start_y, distance, line_deg, station, offset_index,
+                       line_serial_num, line_sub_serial_num, overlap)
+
+        for j1 in range(len(line_xy)):
+            j2 = line_xy[j1]
+            all_line.append(j2)
+
+    # line_var->[current_x, current_y, dis, deg, parentID, poly_gID, sub_serial_num]
+    # line(line_start_x, line_start_y, distance, line_deg, station, offset_index,\
+    #                  line_serial_num, line_sub_serial_num, overlap)
+
+    # circle
+    all_cir = []
+
+    for k3 in range(len(circle_var)):
+        cir_serial_num = k3
+        one_circle_var = circle_var[k3]
+        r = one_circle_var[0]
+        start_deg = one_circle_var[1]
+        cen_x = one_circle_var[2]
+        cen_y = one_circle_var[3]
+        parentID = one_circle_var[4]
+        punch_type = one_circle_var[5]
+
+        cir_xy = circle(r, start_deg, cen_x, cen_y, parentID,
+                        station, punch_type, cir_serial_num)
+        for j1 in range(len(cir_xy)):
+            j2 = cir_xy[j1]
+            all_cir.append(j2)
+
+    # arc
+    all_arc = []
+
+    for k4 in range(len(arc_var)):
+
+        one_arc_var = arc_var[k4]
+        cen_x = one_arc_var[0]
+        cen_y = one_arc_var[1]
+        radius = one_arc_var[2]
+        star_deg = one_arc_var[3]
+        working_deg = one_arc_var[4]
+        orientation = one_arc_var[5]
+        parentID = one_arc_var[6]
+        arc_serial_num = one_arc_var[7]
+        arc_sub_serial_num = one_arc_var[8]
+
+        arc_xy, nib_hit_arc = arc(cen_x, cen_y, radius, star_deg, working_deg, orientation, parentID,
+                                  station, arc_serial_num, arc_sub_serial_num)
+        for j1 in range(len(arc_xy)):
+            j2 = arc_xy[j1]
+            all_arc.append(j2)
+
+    # Octagon hole
+    all_Octagon = []
+
+    for k1 in polygon_var:
+        Octagon_pts = k1[0]
+        parentID = k1[1]
+        poly_gID = k1[2]
+        # hole # polygon_var.append([Octagon_pts, parentID, poly_gID])
+        hole_xy_data = Octagon_hole(
+            Octagon_pts, station, poly_gID, parentID)
+        for j1 in (hole_xy_data):
+            all_Octagon.append(j1)
+    # Octagon hole END
+
+    for kk in range(len(all_line)):
+        xy_data.append(all_line[kk])
+
+    for kk in range(len(all_rect)):
+        xy_data.append(all_rect[kk])
+
+    for kk in range(len(all_cir)):
+        xy_data.append(all_cir[kk])
+
+    for kk in range(len(all_arc)):
+        xy_data.append(all_arc[kk])
+
+    for kk in (all_Octagon):
+        # print(kk)
+        xy_data.append(kk)
+    # xy_data = [line_x, line_y, tool_num, hit_type,line_serial_num, sub_serial_num, ishole]
+
+    # xy_data.sort(key=lambda x:x[2]) ### 重新排列，以第row中的二號位為指標，目的為同一把刀先加工完
+    xy_data = sorted(xy_data, key=itemgetter(
+        6, 2), reverse=True)  # 重新排列，以6、2 的位置排
+    xy_data = alogo.arrange(xy_data)
+
+    graphic_data = graph(xy_data, station)
+    feature_data = feature_calc(xy_data, path + str(sn))
+    feature.append(feature_data)
+
+    txt_path = path + str(sn) + "_result.txt"
+    # txt_path = "rect_shear" + str(sn) + "_result.txt"
+    with open(txt_path, 'w', newline='') as txtfile:
+        writer = csv.writer(txtfile)
+        writer.writerows(graphic_data)
+
+    # for end
+
+
+path = 'Cir_Training_SheetA'
 if __name__ == '__main__':
 
     feature = []
@@ -1626,177 +1800,13 @@ if __name__ == '__main__':
                     "vertical tool in-btwn move", "horizontal tool shear in-btwn move",
                     "vertical tool shear in-btwn move", "turret tool change deg", "total time"])
 
-    path = 'Cir_Training_SheetA'
-    sheet_num = 15
+    sheet_num = 25
 
-    for sn in range(sheet_num):
+    # 設定處理程序數量
+    pool = Pool(4)
 
-        print("input : " + path + str(sn) + ".txt\n")
-        wholedata, row_data = readfile(path + str(sn) + ".txt")
-        # wholedata, row_data = readfile(path + ".txt")
-        line_var, rect_var, circle_var, arc_var, polygon_var = data_to_function(
-            wholedata)
-
-        station = np.zeros([13, 3])  # 刀具規格[長, 寬, 角度]
-        station[0, :] = [20, 4,  0]
-        station[1, :] = [20, 4, 90]
-        station[2, :] = [10, 2, 30]
-        station[3, :] = [10, 2, 45]
-        station[4, :] = [10, 2, 60]
-        station[5, :] = [10, 2, 120]
-        station[6, :] = [10, 2, 135]
-        station[7, :] = [10, 2, 150]
-        station[8, :] = [10, 10, 0]
-        station[9, :] = [1.5, 0, -1]
-        station[10, :] = [2.5, 0, -1]  # 角度-1設為圓刀([半徑, 0, -1])
-        station[11, :] = [10, 0, -1]
-        station[12, :] = [10, 10, 45]
-
-        xy_data = []
-
-        # rect
-        all_rect = []
-
-        for k1 in range(len(rect_var)):
-
-            one_rect_var = rect_var[k1]
-            L = one_rect_var[0]
-            H = one_rect_var[1]
-            sp1 = one_rect_var[2]
-            parentID = one_rect_var[3]
-            punch_type = one_rect_var[4]
-            roDeg = one_rect_var[5]
-            rect_serial_num = one_rect_var[6]
-            rect_subserial_num = one_rect_var[7]
-
-            if parentID == 0:  # rect_outside_edge
-                rect_xy = rect_outside_edge(
-                    L, H, sp1, station, roDeg, rect_serial_num)
-                for j1 in range(len(rect_xy)):
-                    j2 = rect_xy[j1]
-                    all_rect.append(j2)
-
-            else:  # hole
-                hole_xy_data = rect_hole(
-                    L, H, sp1, punch_type, station, roDeg, rect_serial_num, rect_subserial_num)
-                for j1 in range(len(hole_xy_data)):
-                    j2 = hole_xy_data[j1]
-                    all_rect.append(j2)
-        # rect_var->[L, H, star point,   parentID,   punch_type,   roDeg, serial_num, sub_serial_num]
-
-        # line
-        all_line = []
-        for k2 in range(len(line_var)):
-
-            one_line_var = line_var[k2]
-            line_start_x = one_line_var[0]
-            line_start_y = one_line_var[1]
-            distance = one_line_var[2]
-            line_deg = one_line_var[3]
-            offset_index = one_line_var[4]  # parentID
-            line_serial_num = one_line_var[5]
-            line_sub_serial_num = one_line_var[6]
-            overlap = 1
-
-            line_xy = line(line_start_x, line_start_y, distance, line_deg, station, offset_index,
-                           line_serial_num, line_sub_serial_num, overlap)
-
-            for j1 in range(len(line_xy)):
-                j2 = line_xy[j1]
-                all_line.append(j2)
-
-        # line_var->[current_x, current_y, dis, deg, parentID, poly_gID, sub_serial_num]
-        # line(line_start_x, line_start_y, distance, line_deg, station, offset_index,\
-        #                  line_serial_num, line_sub_serial_num, overlap)
-
-        # circle
-        all_cir = []
-
-        for k3 in range(len(circle_var)):
-            cir_serial_num = k3
-            one_circle_var = circle_var[k3]
-            r = one_circle_var[0]
-            start_deg = one_circle_var[1]
-            cen_x = one_circle_var[2]
-            cen_y = one_circle_var[3]
-            parentID = one_circle_var[4]
-            punch_type = one_circle_var[5]
-
-            cir_xy = circle(r, start_deg, cen_x, cen_y, parentID,
-                            station, punch_type, cir_serial_num)
-            for j1 in range(len(cir_xy)):
-                j2 = cir_xy[j1]
-                all_cir.append(j2)
-
-        # arc
-        all_arc = []
-
-        for k4 in range(len(arc_var)):
-
-            one_arc_var = arc_var[k4]
-            cen_x = one_arc_var[0]
-            cen_y = one_arc_var[1]
-            radius = one_arc_var[2]
-            star_deg = one_arc_var[3]
-            working_deg = one_arc_var[4]
-            orientation = one_arc_var[5]
-            parentID = one_arc_var[6]
-            arc_serial_num = one_arc_var[7]
-            arc_sub_serial_num = one_arc_var[8]
-
-            arc_xy, nib_hit_arc = arc(cen_x, cen_y, radius, star_deg, working_deg, orientation, parentID,
-                                      station, arc_serial_num, arc_sub_serial_num)
-            for j1 in range(len(arc_xy)):
-                j2 = arc_xy[j1]
-                all_arc.append(j2)
-
-        # Octagon hole
-        all_Octagon = []
-
-        for k1 in polygon_var:
-            Octagon_pts = k1[0]
-            parentID = k1[1]
-            poly_gID = k1[2]
-            # hole # polygon_var.append([Octagon_pts, parentID, poly_gID])
-            hole_xy_data = Octagon_hole(
-                Octagon_pts, station, poly_gID, parentID)
-            for j1 in (hole_xy_data):
-                all_Octagon.append(j1)
-        # Octagon hole END
-
-        for kk in range(len(all_line)):
-            xy_data.append(all_line[kk])
-
-        for kk in range(len(all_rect)):
-            xy_data.append(all_rect[kk])
-
-        for kk in range(len(all_cir)):
-            xy_data.append(all_cir[kk])
-
-        for kk in range(len(all_arc)):
-            xy_data.append(all_arc[kk])
-
-        for kk in (all_Octagon):
-            # print(kk)
-            xy_data.append(kk)
-        # xy_data = [line_x, line_y, tool_num, hit_type,line_serial_num, sub_serial_num, ishole]
-
-        # xy_data.sort(key=lambda x:x[2]) ### 重新排列，以第row中的二號位為指標，目的為同一把刀先加工完
-        xy_data = sorted(xy_data, key=itemgetter(
-            6, 2), reverse=True)  # 重新排列，以6、2 的位置排
-        xy_data = alogo.arrange(xy_data)
-
-        graphic_data = graph(xy_data, station)
-        feature_data = feature_calc(xy_data, path + str(sn))
-        feature.append(feature_data)
-
-        txt_path = path + str(sn) + "_result.txt"
-        # txt_path = "rect_shear" + str(sn) + "_result.txt"
-        with open(txt_path, 'w', newline='') as txtfile:
-            writer = csv.writer(txtfile)
-            writer.writerows(graphic_data)
-
-    # for end
+    # 運行多處理程序
+    pool_outputs = pool.map(tofeature, list(range(0, sheet_num)))
 
     fea_path = path + "_fea.csv"
     with open(fea_path, 'w', newline='') as csvfile:
